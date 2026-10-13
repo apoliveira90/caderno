@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { store, useWorkspace } from '../model/store';
+import { ConfirmHost } from './Confirm';
 import { PageView } from './PageView';
 import { navigate, useRoute } from './router';
 import { SearchDialog } from './Search';
@@ -56,6 +57,7 @@ export function App() {
         )}
       </main>
       {searching && <SearchDialog onClose={() => setSearching(false)} />}
+      <ConfirmHost />
     </div>
   );
 }

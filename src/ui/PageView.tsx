@@ -5,6 +5,7 @@ import type { Block, ID } from '../model/types';
 import { BlockList } from './BlockEditor';
 import { DatabaseView, RowProperties } from './Database';
 import { requestFocus } from './focus';
+import { confirmAction } from './Confirm';
 import { MenuList, Popover } from './Popover';
 import { navigate } from './router';
 import { exportMarkdown, download } from './exporters';
@@ -98,8 +99,9 @@ function PageTopBar({ block, crumbs }: { block: Block; crumbs: ID[] }) {
                 label: 'Excluir página',
                 icon: '🗑',
                 danger: true,
-                onSelect: () => {
-                  if (!window.confirm(`Excluir "${block.text || 'Sem título'}" e todo o seu conteúdo?`)) return;
+                onSelect: async () => {
+                  setMenu(null);
+                  if (!(await confirmAction(`Excluir "${block.text || 'Sem título'}" e todo o seu conteúdo?`))) return;
                   const parent = block.parent;
                   store.apply((ws) => removeBlock(ws, block.id));
                   setMenu(null);

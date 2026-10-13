@@ -133,6 +133,15 @@ try {
   check((await page.locator('.row-prop').count()) >= 5, 'row page shows its properties');
   await page.screenshot({ path: `${OUT}row.png` });
 
+  console.log('delete with in-page confirmation');
+  await page.locator('.tree-title', { hasText: 'Página de teste' }).click();
+  await page.locator('.topbar button[aria-label="Mais opções"]').click();
+  await page.locator('.menu-item', { hasText: 'Excluir página' }).dispatchEvent('mousedown');
+  await page.waitForSelector('.confirm');
+  await page.locator('.confirm .primary').click();
+  await page.waitForTimeout(100);
+  check((await page.locator('.tree-title', { hasText: 'Página de teste' }).count()) === 0, 'confirmed delete removes the page');
+
   console.log('mobile');
   const phone = await browser.newPage({ viewport: { width: 390, height: 800 } });
   await phone.goto(URL);

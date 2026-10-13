@@ -22,6 +22,7 @@ import {
 } from '../model/ops';
 import { store, useWorkspace } from '../model/store';
 import type { Block, BlockType, ID, Workspace } from '../model/types';
+import { confirmAction } from './Confirm';
 import { DatabaseView } from './Database';
 import { caretOnEdgeLine, getCaret, hasSelection, onFocusRequest, requestFocus, setCaret, takeFocus } from './focus';
 import { MenuList, Popover, type MenuItem } from './Popover';
@@ -628,9 +629,10 @@ function BlockMenu({ block, anchor, onClose }: { block: Block; anchor: HTMLEleme
       label: 'Excluir',
       icon: '🗑',
       danger: true,
-      onSelect: () => {
+      onSelect: async () => {
         const what = block.type === 'page' || block.type === 'database' ? `"${block.text || 'Sem título'}" e todo o seu conteúdo` : null;
-        if (what && !window.confirm(`Excluir ${what}?`)) return;
+        onClose();
+        if (what && !(await confirmAction(`Excluir ${what}?`))) return;
         store.apply((ws) => removeBlock(ws, block.id));
         onClose();
       },

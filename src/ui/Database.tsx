@@ -18,6 +18,7 @@ import { displayValue, groupRows, queryRows, rowValue } from '../model/query';
 import { store, useWorkspace } from '../model/store';
 import type { Block, Color, Filter, FilterOp, ID, Option, Property, PropertyType, PropValue, View } from '../model/types';
 import { newId } from '../model/ids';
+import { confirmAction } from './Confirm';
 import { Popover } from './Popover';
 import { navigate } from './router';
 
@@ -332,8 +333,8 @@ function TableView({ db, view, rows, defaults }: { db: Block; view: View; rows: 
                   className="row-del"
                   aria-label="Excluir linha"
                   title="Excluir linha"
-                  onClick={() => {
-                    if (window.confirm(`Excluir "${r.text || 'Sem título'}"?`)) store.apply((ws) => removeBlock(ws, r.id));
+                  onClick={async () => {
+                    if (await confirmAction(`Excluir "${r.text || 'Sem título'}"?`)) store.apply((ws) => removeBlock(ws, r.id));
                   }}
                 >
                   🗑
@@ -439,8 +440,9 @@ function PropertyMenu({ db, view, prop, anchor, onClose }: { db: Block; view: Vi
               <button
                 type="button"
                 className="menu-item danger"
-                onClick={() => {
-                  if (!window.confirm(`Excluir a propriedade "${prop.name}" e seus valores?`)) return;
+                onClick={async () => {
+                  onClose();
+                  if (!(await confirmAction(`Excluir a propriedade "${prop.name}" e seus valores?`))) return;
                   store.apply((ws) => deleteProperty(ws, db.id, prop.id));
                   onClose();
                 }}

@@ -27,7 +27,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #191919;
     --bg-side: #202020;
     --bg-hover: rgba(255, 255, 255, 0.055);
@@ -50,6 +50,30 @@
     --c-red: #6e3630;
     color-scheme: dark;
   }
+}
+
+:root[data-theme="dark"] {
+  --bg: #191919;
+  --bg-side: #202020;
+  --bg-hover: rgba(255, 255, 255, 0.055);
+  --bg-active: rgba(255, 255, 255, 0.1);
+  --fg: rgba(255, 255, 255, 0.86);
+  --fg-soft: rgba(255, 255, 255, 0.55);
+  --fg-faint: rgba(255, 255, 255, 0.32);
+  --line: rgba(255, 255, 255, 0.1);
+  --accent-soft: rgba(35, 131, 226, 0.3);
+  --shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 3px 6px rgba(0, 0, 0, 0.4), 0 9px 24px rgba(0, 0, 0, 0.5);
+  --c-default: rgba(255, 255, 255, 0.12);
+  --c-gray: #474c50;
+  --c-brown: #5c4b43;
+  --c-orange: #854c1d;
+  --c-yellow: #89632a;
+  --c-green: #2b593f;
+  --c-blue: #28456c;
+  --c-purple: #492f64;
+  --c-pink: #69314c;
+  --c-red: #6e3630;
+  color-scheme: dark;
 }
 
 * {
@@ -118,6 +142,9 @@ kbd {
   padding: 3px 10px;
   font-size: 14px;
   font-weight: 500;
+}
+.primary.danger-fill {
+  background: var(--danger);
 }
 .primary:hover {
   filter: brightness(1.08);
@@ -1196,7 +1223,30 @@ tr:hover .row-del {
   align-self: flex-start;
 }
 
-/* ---------------------------------------------------------------- search */
+/* ---------------------------------------------------------- confirm/search */
+
+.confirm {
+  width: 100%;
+  max-width: 400px;
+  background: var(--bg);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.confirm p {
+  margin: 0;
+}
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.confirm .primary {
+  padding: 6px 14px;
+}
 
 .overlay {
   position: fixed;

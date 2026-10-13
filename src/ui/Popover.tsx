@@ -59,7 +59,7 @@ export interface MenuItem {
   hint?: string;
   icon?: string;
   danger?: boolean;
-  onSelect: () => void;
+  onSelect: () => void | Promise<void>;
 }
 
 /** Keyboard-navigable list used by the slash menu and context menus. */
@@ -80,7 +80,7 @@ export function MenuList({ items, active, onHover }: { items: MenuItem[]; active
           onMouseEnter={() => onHover(i)}
           onMouseDown={(e) => {
             e.preventDefault();
-            it.onSelect();
+            void it.onSelect();
           }}
         >
           {it.icon !== undefined && <span className="menu-icon">{it.icon}</span>}

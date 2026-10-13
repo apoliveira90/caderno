@@ -3,6 +3,7 @@ import { createDatabase, createPage, duplicateBlock, isContainer, moveBlock, rem
 import { buildSeed } from '../model/seed';
 import { isWorkspace, store, useWorkspace } from '../model/store';
 import type { Block, ID } from '../model/types';
+import { confirmAction, notify } from './Confirm';
 import { download } from './exporters';
 import { MenuList, Popover } from './Popover';
 import { navigate } from './router';
@@ -108,8 +109,8 @@ export function Sidebar({ current, onSearch, open, onClose }: { current: ID | nu
         <button
           type="button"
           className="side-action muted"
-          onClick={() => {
-            if (window.confirm('Substituir tudo pelo conteúdo de exemplo? Exporte um backup antes se quiser guardar o atual.')) {
+          onClick={async () => {
+            if (await confirmAction('Substituir tudo pelo conteúdo de exemplo? Exporte um backup antes se quiser guardar o atual.', 'Substituir')) {
               store.replace(buildSeed());
               navigate(store.get().rootIds[0] ?? null);
             }
@@ -129,11 +130,11 @@ export function Sidebar({ current, onSearch, open, onClose }: { current: ID | nu
             try {
               const data = JSON.parse(await file.text());
               if (!isWorkspace(data)) throw new Error('formato');
-              if (!window.confirm('Importar este backup substitui o conteúdo atual. Continuar?')) return;
+              if (!(await confirmAction('Importar este backup substitui o conteúdo atual. Continuar?', 'Importar'))) return;
               store.replace(data);
               navigate(data.rootIds[0] ?? null);
             } catch {
-              window.alert('Arquivo inválido: escolha um backup exportado pelo Caderno.');
+              void notify('Arquivo inválido: escolha um backup exportado pelo Caderno.');
             }
           }}
         />
@@ -279,8 +280,9 @@ function TreeItem({ id, depth, blocks, current, expanded, toggle, onNewChild, on
                 label: 'Excluir',
                 icon: '🗑',
                 danger: true,
-                onSelect: () => {
-                  if (!window.confirm(`Excluir "${b.text || 'Sem título'}" e todo o seu conteúdo?`)) return;
+                onSelect: async () => {
+                  setMenu(null);
+                  if (!(await confirmAction(`Excluir "${b.text || 'Sem título'}" e todo o seu conteúdo?`))) return;
                   store.apply((ws) => removeBlock(ws, id));
                   setMenu(null);
                   if (current === id) navigate(store.get().rootIds[0] ?? null);
