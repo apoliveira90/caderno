@@ -2,6 +2,7 @@
 // Bradesco meeting notes and the task database with its action items.
 
 import { newId } from './ids';
+import { addAutomacoesProcessos } from './imports/automacoes';
 import { addProperty, addRow, createDatabase, emptyWorkspace, insertBlock, makeBlock, makeView, updateBlock } from './ops';
 import type { BlockType, Color, ID, Option, Workspace } from './types';
 
@@ -157,5 +158,5 @@ export function buildSeed(): Workspace {
     views: [makeView('board', 'Minhas tarefas', { groupBy: status.id, filters: mine.filters.map((f) => ({ ...f, id: newId() })) })],
   });
   ws = insertBlock(ws, linked, welcome.id);
-  return ws;
+  return addAutomacoesProcessos(ws);
 }

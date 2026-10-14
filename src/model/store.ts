@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import type { Workspace } from './types';
+import { applyPendingImports } from './imports/automacoes';
 import { buildSeed } from './seed';
 
 const STORAGE_KEY = 'caderno.workspace.v1';
@@ -18,7 +19,7 @@ function load(): Workspace {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (isWorkspace(parsed)) return parsed;
+      if (isWorkspace(parsed)) return applyPendingImports(parsed);
     }
   } catch {
     // Storage blocked or corrupt: start from the seed below.

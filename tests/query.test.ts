@@ -4,6 +4,7 @@ import { addOption, addProperty, addRow, createDatabase, createPage, emptyWorksp
 import { groupRows, queryRows, searchWorkspace } from '../src/model/query';
 import { buildSeed } from '../src/model/seed';
 import { Store } from '../src/model/store';
+import { applyPendingImports } from '../src/model/imports/automacoes';
 
 function sample() {
   const d = createDatabase(emptyWorkspace(), null, 'T');
@@ -128,3 +129,25 @@ describe('Store', () => {
   });
 });
 
+
+describe('Automações Processos import', () => {
+  it('is in the seed with 14 projects and the Notion view order', () => {
+    const ws = buildSeed();
+    const db = Object.values(ws.blocks).find((b) => b.text === 'Automações Processos')!;
+    expect(db.type).toBe('database');
+    expect(db.children).toHaveLength(14);
+    const all = db.views![0];
+    const titles = queryRows(ws, db.id, all.filters, all.sorts).map((r) => r.text);
+    expect(titles[0]).toBe('Solicitação Cartões de Pontos');
+    expect(titles.slice(-3)).toEqual(['Relatório Setor Comprovantes 1.0', 'Raizen - verificar com Andre', 'Automação processo Volks']);
+    const mine = db.views!.find((v) => v.name === 'Minhas')!;
+    expect(queryRows(ws, db.id, mine.filters, mine.sorts)).toHaveLength(8);
+  });
+
+  it('is added once to a saved workspace that predates it', () => {
+    const old = { ...emptyWorkspace() };
+    const once = applyPendingImports(old);
+    expect(once.rootIds).toHaveLength(1);
+    expect(applyPendingImports(once)).toBe(once);
+  });
+});

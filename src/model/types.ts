@@ -103,4 +103,6 @@ export interface Workspace {
   version: 1;
   rootIds: ID[];
   blocks: Record<ID, Block>;
+  /** Data imports already applied, so they are added once. */
+  imports?: string[];
 }

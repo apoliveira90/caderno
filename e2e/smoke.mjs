@@ -155,6 +155,12 @@ try {
   const titles = await page.locator('.db-table tbody .title-cell input').evaluateAll((els) => els.map((e) => e.value));
   check(titles.includes('Criada pelo vínculo'), 'a row added in the linked view lands in the source');
 
+  console.log('imported Notion database');
+  await page.locator('.tree-title', { hasText: 'Automações Processos' }).click();
+  await page.waitForSelector('.full-db .db-table');
+  check((await page.locator('.db-table tbody tr').count()) === 14, 'Automações Processos shows its 14 projects');
+  await page.screenshot({ path: `${OUT}automacoes.png` });
+
   console.log('delete with in-page confirmation');
   await page.locator('.tree-title', { hasText: 'Página de teste' }).click();
   await page.locator('.topbar button[aria-label="Mais opções"]').click();

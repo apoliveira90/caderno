@@ -18,6 +18,8 @@ Workspace de páginas, blocos e bancos de dados no estilo do Notion, feito do ze
 - **Backup**: exportar/importar o workspace em JSON; exportar uma página em Markdown.
 - Tema claro/escuro automático e layout para celular.
 
+O banco **Automações Processos** (14 projetos) foi importado do Notion em 14/10/2026 (`src/model/imports/automacoes.ts`); workspaces já salvos recebem o banco uma vez, ao abrir.
+
 O conteúdo inicial traz a reunião "Instrução de Protesto / Contrato de Cobrança para Teste / Grupo Della Volpe" (21/09/2026) e o banco **Tarefas** com as 9 ações dela, nas visualizações Todas, Por status e Minhas.
 
 ## Rodar
