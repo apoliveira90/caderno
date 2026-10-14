@@ -3,10 +3,13 @@ import {
   addOption,
   addProperty,
   addRow,
+  addView,
   changePropertyType,
   createDatabase,
+  createLinkedView,
   createPage,
   deleteProperty,
+  deleteView,
   duplicateBlock,
   emptyWorkspace,
   indentBlock,
@@ -17,7 +20,9 @@ import {
   outdentBlock,
   removeBlock,
   setRowProp,
+  sourceOf,
   splitBlock,
+  updateView,
   visibleOrder,
 } from '../src/model/ops';
 import type { Workspace } from '../src/model/types';
@@ -199,5 +204,47 @@ describe('databases', () => {
     const r = addRow(p.ws, d.id, 'x', { [p.id]: '12,5' });
     const ws = changePropertyType(r.ws, d.id, p.id, 'number');
     expect(ws.blocks[r.id].props![p.id]).toBe(12.5);
+  });
+});
+
+describe('linked views', () => {
+  it('shows the source rows through views stored on the linked block', () => {
+    const d = createDatabase(emptyWorkspace(), null, 'T');
+    const r = addRow(d.ws, d.id, 'linha');
+    const page = createPage(r.ws, null, 'Outra');
+    const link = createLinkedView(page.ws, page.id, d.id);
+    const block = link.ws.blocks[link.id];
+    expect(block.type).toBe('linked_db');
+    expect(block.source).toBe(d.id);
+    expect(block.views![0].id).not.toBe(link.ws.blocks[d.id].views![0].id);
+    expect(sourceOf(link.ws, link.id)?.id).toBe(d.id);
+  });
+
+  it('updateView and deleteView find a view on the linked block', () => {
+    const d = createDatabase(emptyWorkspace(), null, 'T');
+    const link = createLinkedView(d.ws, null, d.id);
+    const added = addView(link.ws, link.id, 'board');
+    const linkViews = added.ws.blocks[link.id].views!;
+    expect(linkViews).toHaveLength(2);
+    let ws = updateView(added.ws, d.id, linkViews[0].id, { name: 'Minha' });
+    expect(ws.blocks[link.id].views![0].name).toBe('Minha');
+    expect(ws.blocks[d.id].views!.map((v) => v.name)).toEqual(['Tabela', 'Quadro']);
+    ws = deleteView(ws, d.id, linkViews[1].id);
+    expect(ws.blocks[link.id].views).toHaveLength(1);
+  });
+
+  it('deleting a property cleans linked views too', () => {
+    const d = createDatabase(emptyWorkspace(), null, 'T');
+    const status = d.ws.blocks[d.id].schema![1];
+    const link = createLinkedView(d.ws, null, d.id);
+    const vid = link.ws.blocks[link.id].views![0].id;
+    let ws = updateView(link.ws, d.id, vid, { groupBy: status.id, sorts: [{ propId: status.id, dir: 'asc' }] });
+    ws = deleteProperty(ws, d.id, status.id);
+    expect(ws.blocks[link.id].views![0]).toMatchObject({ groupBy: undefined, sorts: [] });
+  });
+
+  it('only databases can be linked', () => {
+    const p = createPage(emptyWorkspace(), null, 'P');
+    expect(createLinkedView(p.ws, null, p.id).ws).toBe(p.ws);
   });
 });

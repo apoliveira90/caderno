@@ -133,6 +133,28 @@ try {
   check((await page.locator('.row-prop').count()) >= 5, 'row page shows its properties');
   await page.screenshot({ path: `${OUT}row.png` });
 
+  console.log('linked views');
+  await page.locator('.tree-title', { hasText: 'Comece aqui' }).click();
+  await page.waitForSelector('.type-linked_db .board');
+  check((await page.locator('.type-linked_db .card').count()) === 2, 'seeded linked board shows only André’s 2 tasks');
+  await page.locator('.side-action', { hasText: 'Nova página' }).click();
+  await page.waitForFunction(() => document.activeElement?.classList.contains('page-title'));
+  await page.keyboard.type('Vínculos');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('/vincul');
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('.link-picker');
+  await page.locator('.link-picker .menu-item', { hasText: 'Tarefas' }).dispatchEvent('mousedown');
+  await page.waitForSelector('.type-linked_db .db-table');
+  check((await page.locator('.type-linked_db .db-table tbody tr').count()) === 9, 'slash command links the Tarefas database');
+  await page.locator('.type-linked_db .add-row').click();
+  await page.keyboard.type('Criada pelo vínculo');
+  await page.keyboard.press('Enter');
+  await page.locator('.tree-title', { hasText: 'Instrução de Protesto' }).click();
+  await page.waitForSelector('.db-table');
+  const titles = await page.locator('.db-table tbody .title-cell input').evaluateAll((els) => els.map((e) => e.value));
+  check(titles.includes('Criada pelo vínculo'), 'a row added in the linked view lands in the source');
+
   console.log('delete with in-page confirmation');
   await page.locator('.tree-title', { hasText: 'Página de teste' }).click();
   await page.locator('.topbar button[aria-label="Mais opções"]').click();

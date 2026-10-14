@@ -4,6 +4,7 @@ import {
   childrenOf,
   convertBlock,
   createDatabase,
+  createLinkedView,
   createPage,
   duplicateBlock,
   indentBlock,
@@ -32,7 +33,7 @@ interface SlashCommand {
   label: string;
   icon: string;
   keys: string;
-  type: BlockType | 'subpage' | 'inline-db';
+  type: BlockType | 'subpage' | 'inline-db' | 'linked-db';
 }
 
 export const SLASH_COMMANDS: SlashCommand[] = [
@@ -50,6 +51,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
   { label: 'Divisor', icon: '—', keys: 'divisor divider linha', type: 'divider' },
   { label: 'Página', icon: '📄', keys: 'pagina page subpagina', type: 'subpage' },
   { label: 'Banco de dados', icon: '▦', keys: 'banco dados database tabela quadro', type: 'inline-db' },
+  { label: 'Visualização vinculada', icon: '↗', keys: 'vinculada visualizacao linked banco dados', type: 'linked-db' },
 ];
 
 const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -193,6 +195,12 @@ function renderBody(block: Block, pageId: ID, number: number) {
           <DatabaseView dbId={block.id} inline />
         </div>
       );
+    case 'linked_db':
+      return (
+        <div className="block-db">
+          <DatabaseView dbId={block.source ?? ''} linkId={block.id} inline />
+        </div>
+      );
     case 'divider':
       return <Divider block={block} pageId={pageId} />;
     default:
@@ -266,6 +274,7 @@ interface SlashState {
 function TextBlock({ block, pageId, number }: { block: Block; pageId: ID; number: number }) {
   const ref = useFocusTarget<HTMLDivElement>(block.id);
   const [slash, setSlash] = useState<SlashState | null>(null);
+  const [linkPicker, setLinkPicker] = useState<{ rect: DOMRect; rest: string } | null>(null);
   const commands = useMemo(() => (slash ? filterCommands(slash.query) : []), [slash]);
 
   // Keep the DOM in sync when the text changes from outside (undo, merge, convert).
@@ -290,6 +299,10 @@ function TextBlock({ block, pageId, number }: { block: Block; pageId: ID; number
       setSlash(null);
       const replace = rest.trim() === '' && block.children.length === 0;
       const t = cmd.type;
+      if (t === 'linked-db') {
+        setLinkPicker({ rect: slash.rect, rest });
+        return;
+      }
       if (t === 'subpage' || t === 'inline-db') {
         let createdId = '';
         store.apply((ws) => {
@@ -332,6 +345,20 @@ function TextBlock({ block, pageId, number }: { block: Block; pageId: ID; number
     },
     [block, ref, slash],
   );
+
+  const insertLinkedView = (sourceId: ID) => {
+    if (!linkPicker) return;
+    const rest = linkPicker.rest;
+    setLinkPicker(null);
+    const replace = rest.trim() === '' && block.children.length === 0;
+    store.apply((ws) => {
+      let next = updateBlock(ws, block.id, { text: rest });
+      const index = childrenOf(next, block.parent).indexOf(block.id) + (replace ? 0 : 1);
+      if (replace) next = removeBlock(next, block.id);
+      const made = createLinkedView(next, block.parent, sourceId, index);
+      return insertAfter(made.ws, makeBlock('text'), made.id);
+    });
+  };
 
   const onInput = () => {
     const el = ref.current;
@@ -521,7 +548,19 @@ function TextBlock({ block, pageId, number }: { block: Block; pageId: ID; number
     />
   );
 
-  const slashMenu = slash && (
+  const databases = linkPicker ? Object.values(store.get().blocks).filter((b) => b.type === 'database') : [];
+  const pickerMenu = linkPicker && (
+    <Popover anchor={linkPicker.rect} onClose={() => setLinkPicker(null)} width={300} className="link-picker">
+      <div className="menu-title">Mostrar qual banco de dados?</div>
+      <MenuList
+        items={databases.map<MenuItem>((d) => ({ label: d.text || 'Sem título', icon: d.icon ?? '▦', onSelect: () => insertLinkedView(d.id) }))}
+        active={-1}
+        onHover={() => {}}
+      />
+    </Popover>
+  );
+
+  const slashMenu = slash ? (
     <Popover anchor={slash.rect} onClose={() => setSlash(null)} width={280} className="slash-popover">
       <div className="menu-title">Blocos básicos</div>
       <MenuList
@@ -530,6 +569,8 @@ function TextBlock({ block, pageId, number }: { block: Block; pageId: ID; number
         onHover={(i) => setSlash({ ...slash, active: i })}
       />
     </Popover>
+  ) : (
+    pickerMenu
   );
 
   // One stable tree for every type, so the editable element (and its focus)

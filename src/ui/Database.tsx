@@ -75,15 +75,22 @@ export function formatDate(iso: string): string {
 
 // ------------------------------------------------------------- the view ---
 
-export function DatabaseView({ dbId, inline = false }: { dbId: ID; inline?: boolean }) {
+/**
+ * Shows a database. With `linkId`, it renders a linked view: rows and schema
+ * come from the source database, the views from the linked block.
+ */
+export function DatabaseView({ dbId, inline = false, linkId }: { dbId: ID; inline?: boolean; linkId?: ID }) {
   const ws = useWorkspace((w) => w);
   const db = ws.blocks[dbId];
+  const owner = linkId ? ws.blocks[linkId] : db;
   const [viewId, setViewId] = useState<ID | null>(null);
-  const view = db?.views?.find((v) => v.id === viewId) ?? db?.views?.[0];
+  const view = owner?.views?.find((v) => v.id === viewId) ?? owner?.views?.[0];
   const rows = useMemo(() => (db && view ? queryRows(ws, dbId, view.filters, view.sorts) : []), [ws, db, dbId, view]);
   const [panel, setPanel] = useState<{ kind: 'filter' | 'sort' | 'props' | 'group' | 'view' | 'addView'; anchor: HTMLElement } | null>(null);
 
-  if (!db || !view) return <div className="db-missing">Banco de dados não encontrado.</div>;
+  if (!db || db.type !== 'database' || !owner || !view) {
+    return <div className="db-missing">{linkId ? 'O banco de dados de origem desta visualização foi excluído.' : 'Banco de dados não encontrado.'}</div>;
+  }
   const schema = db.schema ?? [];
 
   const newRowDefaults = (): Record<ID, PropValue> => {
@@ -106,11 +113,12 @@ export function DatabaseView({ dbId, inline = false }: { dbId: ID; inline?: bool
             <span>{db.icon ?? '▦'}</span>
             <InlineTitle db={db} />
           </button>
+          {linkId && <span className="db-linked" title="Visualização vinculada: os registros vêm do banco de origem">↗ vinculado</span>}
         </div>
       )}
       <div className="db-toolbar">
         <div className="db-tabs" role="tablist">
-          {db.views!.map((v) => (
+          {owner.views!.map((v) => (
             <button
               key={v.id}
               type="button"
@@ -170,6 +178,7 @@ export function DatabaseView({ dbId, inline = false }: { dbId: ID; inline?: bool
         <ViewPanel
           db={db}
           view={view}
+          canDelete={(owner.views?.length ?? 0) > 1}
           anchor={panel.anchor}
           onClose={() => setPanel(null)}
           onDeleted={() => setViewId(null)}
@@ -184,7 +193,7 @@ export function DatabaseView({ dbId, inline = false }: { dbId: ID; inline?: bool
                 type="button"
                 className="menu-item"
                 onClick={() => {
-                  const r = addView(store.get(), dbId, t);
+                  const r = addView(store.get(), owner.id, t);
                   store.apply(() => r.ws);
                   setViewId(r.id);
                   setPanel(null);
@@ -969,7 +978,21 @@ function GroupPanel({ db, view, anchor, onClose }: { db: Block; view: View; anch
   );
 }
 
-function ViewPanel({ db, view, anchor, onClose, onDeleted }: { db: Block; view: View; anchor: HTMLElement; onClose: () => void; onDeleted: () => void }) {
+function ViewPanel({
+  db,
+  view,
+  canDelete,
+  anchor,
+  onClose,
+  onDeleted,
+}: {
+  db: Block;
+  view: View;
+  canDelete: boolean;
+  anchor: HTMLElement;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
   return (
     <Popover anchor={anchor} onClose={onClose} width={240}>
       <div className="panel">
@@ -988,7 +1011,7 @@ function ViewPanel({ db, view, anchor, onClose, onDeleted }: { db: Block; view: 
             <option value="board">Quadro</option>
           </select>
         </label>
-        {(db.views?.length ?? 0) > 1 && (
+        {canDelete && (
           <button
             type="button"
             className="ghost danger"

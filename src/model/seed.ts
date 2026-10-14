@@ -140,6 +140,10 @@ export function buildSeed(): Workspace {
     ws = insertBlock(row.ws, makeBlock('text'), row.id);
   }
 
+  ws = fill(ws, welcome.id, [
+    ['h3', 'Visualização vinculada'],
+    ['text', 'O quadro abaixo mostra o banco "Tarefas" da página da reunião, com filtro próprio. Edite aqui ou lá: os registros são os mesmos.'],
+  ]);
   ws = updateBlock(ws, db.id, {
     views: [
       makeView('table', 'Todas', { sorts: [{ propId: pPrio, dir: 'asc' }] }),
@@ -147,5 +151,11 @@ export function buildSeed(): Workspace {
       makeView('table', 'Minhas', { filters: [{ id: newId(), propId: pResp, op: 'contains', value: people.andre.id }] }),
     ],
   });
+  const mine = ws.blocks[db.id].views!.find((v) => v.name === 'Minhas')!;
+  const linked = makeBlock('linked_db', {
+    source: db.id,
+    views: [makeView('board', 'Minhas tarefas', { groupBy: status.id, filters: mine.filters.map((f) => ({ ...f, id: newId() })) })],
+  });
+  ws = insertBlock(ws, linked, welcome.id);
   return ws;
 }

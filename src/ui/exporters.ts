@@ -55,6 +55,11 @@ export function exportMarkdown(ws: Workspace, pageId: ID): string {
         case 'database':
           out.push(`${pad}**${b.text || 'Sem título'}**`, '', ...databaseTable(ws, b.id), '');
           break;
+        case 'linked_db': {
+          const src = b.source ? ws.blocks[b.source] : undefined;
+          out.push(`${pad}**${src?.text || 'Sem título'}** (vinculado)`, '', ...(src ? databaseTable(ws, src.id) : []), '');
+          break;
+        }
         default:
           out.push(pad + b.text);
       }

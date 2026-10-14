@@ -13,6 +13,7 @@ Workspace de páginas, blocos e bancos de dados no estilo do Notion, feito do ze
   - Propriedades: texto, número, seleção, seleção múltipla, status (com grupos), pessoa, data, caixa de seleção e URL; renomear, mudar o tipo (com conversão de valores), ocultar e excluir.
   - Visualizações em **tabela** e **quadro** (kanban com arrastar entre colunas), com filtros, ordenações e agrupamento por visualização.
   - Cada registro abre como página, com as propriedades no topo e conteúdo livre embaixo.
+  - **Visualizações vinculadas**: mostre um banco existente em outra página com filtros e layout próprios (`/Visualização vinculada`); os registros continuam no banco de origem.
 - **Busca** (Ctrl/Cmd+K) em títulos e conteúdo; **desfazer/refazer** (Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z).
 - **Backup**: exportar/importar o workspace em JSON; exportar uma página em Markdown.
 - Tema claro/escuro automático e layout para celular.
@@ -45,4 +46,4 @@ Tudo é um bloco (`src/model/types.ts`): páginas, parágrafos, bancos de dados 
 - `src/model/store.ts` — estado com histórico (desfazer) e persistência em `localStorage`.
 - `src/ui/` — React: barra lateral, editor de blocos, banco de dados, busca.
 
-Veja `docs/rea.md` sobre a análise de engenharia reversa.
+A análise do app desktop do Notion com o REA, e o que ela mudou no Caderno, está em `docs/rea.md`.

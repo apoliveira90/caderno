@@ -6,6 +6,7 @@ export type ID = string;
 export type BlockType =
   | 'page'
   | 'database'
+  | 'linked_db'
   | 'text'
   | 'h1'
   | 'h2'
@@ -86,9 +87,12 @@ export interface Block {
   icon?: string;
   checked?: boolean;
   collapsed?: boolean;
-  /** Database schema and views (type === 'database'). */
+  /** Database schema (type === 'database'). */
   schema?: Property[];
+  /** Views of a database, or of the database a linked view shows. */
   views?: View[];
+  /** The database a linked view shows (type === 'linked_db'). */
+  source?: ID;
   /** Property values of a database row (a page whose parent is a database). */
   props?: Record<ID, PropValue>;
   createdAt: number;

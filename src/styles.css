@@ -764,6 +764,22 @@ select {
 .db-inline-title:hover {
   background: var(--bg-hover);
 }
+.db-inline-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.db-linked {
+  font-size: 12px;
+  color: var(--fg-faint);
+}
+.db-missing {
+  padding: 10px 12px;
+  border-radius: 4px;
+  background: var(--bg-hover);
+  color: var(--fg-soft);
+  font-size: 14px;
+}
 .db-title-input {
   font-size: 20px;
   font-weight: 650;

@@ -10,7 +10,7 @@ export const OPTION_COLORS: Color[] = ['gray', 'brown', 'orange', 'yellow', 'gre
 export const isContainer = (b: Block | undefined): boolean => !!b && (b.type === 'page' || b.type === 'database');
 
 /** Block types whose text is the editable line of a content block. */
-export const isTextual = (t: BlockType): boolean => t !== 'page' && t !== 'database' && t !== 'divider';
+export const isTextual = (t: BlockType): boolean => t !== 'page' && t !== 'database' && t !== 'linked_db' && t !== 'divider';
 
 /** Types that keep their kind when Enter creates the next block. */
 const CONTINUING: BlockType[] = ['todo', 'bullet', 'numbered'];
@@ -206,7 +206,7 @@ export function mergeWithPrevious(ws: Workspace, id: ID): { ws: Workspace; focus
       prevId = cand.id;
       break;
     }
-    if (cand && (cand.type === 'divider' || isContainer(cand))) {
+    if (cand && !isTextual(cand.type)) {
       // Deleting an empty line right after a divider or sub-page just removes the line.
       if (b.text === '' && b.children.length === 0) {
         return { ws: removeBlock(ws, id), focusId: cand.id, offset: -1 };
@@ -343,15 +343,16 @@ export function deleteProperty(ws: Workspace, dbId: ID, propId: ID): Workspace {
   if (propId === 'title') return ws;
   let next = mapSchema(ws, dbId, (s) => s.filter((p) => p.id !== propId));
   const db = next.blocks[dbId];
-  next = updateBlock(next, dbId, {
-    views: (db.views ?? []).map((v) => ({
+  const clean = (views: View[] = []) =>
+    views.map((v) => ({
       ...v,
       groupBy: v.groupBy === propId ? undefined : v.groupBy,
       filters: v.filters.filter((f) => f.propId !== propId),
       sorts: v.sorts.filter((s) => s.propId !== propId),
       hidden: v.hidden.filter((h) => h !== propId),
-    })),
-  });
+    }));
+  next = updateBlock(next, dbId, { views: clean(db.views) });
+  for (const link of linkedViewsOf(next, dbId)) next = updateBlock(next, link.id, { views: clean(link.views) });
   for (const rowId of db.children) {
     const row = next.blocks[rowId];
     if (row?.props && propId in row.props) {
@@ -390,24 +391,60 @@ export function setRowProp(ws: Workspace, rowId: ID, propId: ID, value: PropValu
   return updateBlock(ws, rowId, { props: { ...row.props, [propId]: value } });
 }
 
-export function updateView(ws: Workspace, dbId: ID, viewId: ID, patch: Partial<View>): Workspace {
-  const db = ws.blocks[dbId];
-  if (!db?.views) return ws;
-  return updateBlock(ws, dbId, { views: db.views.map((v) => (v.id === viewId ? { ...v, ...patch, id: v.id } : v)) });
+/** The database a block's rows and schema come from: itself, or a linked view's source. */
+export function sourceOf(ws: Workspace, id: ID): Block | undefined {
+  const b = ws.blocks[id];
+  return b?.type === 'linked_db' ? (b.source ? ws.blocks[b.source] : undefined) : b;
 }
 
-export function addView(ws: Workspace, dbId: ID, type: View['type']): { ws: Workspace; id: ID } {
-  const db = ws.blocks[dbId];
-  if (!db) return { ws, id: '' };
+function linkedViewsOf(ws: Workspace, dbId: ID): Block[] {
+  return Object.values(ws.blocks).filter((b) => b.type === 'linked_db' && b.source === dbId);
+}
+
+/**
+ * Block that stores a view: the database itself or one of its linked views.
+ * View ids are unique, so callers can pass the source database id.
+ */
+export function viewOwner(ws: Workspace, dbId: ID, viewId: ID): ID | null {
+  if (ws.blocks[dbId]?.views?.some((v) => v.id === viewId)) return dbId;
+  return linkedViewsOf(ws, dbId).find((b) => b.views?.some((v) => v.id === viewId))?.id ?? null;
+}
+
+export function updateView(ws: Workspace, dbId: ID, viewId: ID, patch: Partial<View>): Workspace {
+  const owner = viewOwner(ws, dbId, viewId);
+  const views = owner ? ws.blocks[owner].views : undefined;
+  if (!owner || !views) return ws;
+  return updateBlock(ws, owner, { views: views.map((v) => (v.id === viewId ? { ...v, ...patch, id: v.id } : v)) });
+}
+
+/** Adds a view to a database or to a linked view (`ownerId`). */
+export function addView(ws: Workspace, ownerId: ID, type: View['type']): { ws: Workspace; id: ID } {
+  const owner = ws.blocks[ownerId];
+  const db = sourceOf(ws, ownerId);
+  if (!owner || !db) return { ws, id: '' };
   const groupable = db.schema?.find((p) => p.type === 'status' || p.type === 'select');
   const view = makeView(type, type === 'table' ? 'Tabela' : 'Quadro', type === 'board' ? { groupBy: groupable?.id } : {});
-  return { ws: updateBlock(ws, dbId, { views: [...(db.views ?? []), view] }), id: view.id };
+  return { ws: updateBlock(ws, ownerId, { views: [...(owner.views ?? []), view] }), id: view.id };
 }
 
 export function deleteView(ws: Workspace, dbId: ID, viewId: ID): Workspace {
-  const db = ws.blocks[dbId];
-  if (!db?.views || db.views.length <= 1) return ws;
-  return updateBlock(ws, dbId, { views: db.views.filter((v) => v.id !== viewId) });
+  const owner = viewOwner(ws, dbId, viewId);
+  const views = owner ? ws.blocks[owner].views : undefined;
+  if (!owner || !views || views.length <= 1) return ws;
+  return updateBlock(ws, owner, { views: views.filter((v) => v.id !== viewId) });
+}
+
+/**
+ * Inserts a block that shows an existing database with its own views, like a
+ * linked database in Notion. Rows and properties stay in the source.
+ */
+export function createLinkedView(ws: Workspace, parent: ID | null, sourceId: ID, index?: number): { ws: Workspace; id: ID } {
+  const src = ws.blocks[sourceId];
+  if (!src || src.type !== 'database') return { ws, id: '' };
+  const first = src.views?.[0];
+  const view = first ? { ...first, id: newId(), filters: first.filters.map((f) => ({ ...f, id: newId() })) } : makeView('table', 'Tabela');
+  const block = makeBlock('linked_db', { source: sourceId, views: [view] });
+  return { ws: insertBlock(ws, block, parent, index), id: block.id };
 }
 
 /** Turns a content block into another type, keeping its text. */
